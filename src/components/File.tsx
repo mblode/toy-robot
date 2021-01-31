@@ -32,8 +32,7 @@ const File = ({ parentCallback }: Props) => {
         <div>
             <FileUploader
                 onCancel={reset}
-                onDrop={(acceptedFiles, rejectedFiles) => {
-                    console.log(acceptedFiles, rejectedFiles);
+                onDrop={(acceptedFiles, _) => {
                     handleChangeFile(acceptedFiles);
                 }}
                 progressMessage={isUploading ? `Uploading... hang tight.` : ''}

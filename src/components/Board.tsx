@@ -1,6 +1,7 @@
 import React from 'react';
 import Data from '../helpers/Data';
 import { useStyletron } from 'baseui';
+import { Paragraph1 } from 'baseui/typography';
 
 const Board = () => {
     const [css] = useStyletron();
@@ -23,8 +24,11 @@ const Board = () => {
                                 height: `${Data.height}px`,
                                 justifyContent: 'center',
                                 alignItems: 'center',
+                                boxShadow: '0 0 0 2px white inset',
                             })}>
-                            {Data.rows - i - 1},{j}
+                            <Paragraph1>
+                                {Data.rows - i - 1},{j}
+                            </Paragraph1>
                         </div>
                     ))}
                 </div>

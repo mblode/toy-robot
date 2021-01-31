@@ -3,156 +3,193 @@ import Image from '../img/robot.png';
 import Data, { Direction, Command } from '../helpers/Data';
 import { useStyletron } from 'baseui';
 
+interface IPos {
+    x: number;
+    y: number;
+    f: Direction;
+}
+
 type Props = {
+    parentCallback: (content: string) => void;
     file: string;
 };
 
-const Robot = ({ file }: Props) => {
+const Robot = ({ parentCallback, file }: Props) => {
     const [css] = useStyletron();
     const [x, setX] = useState(0);
     const [y, setY] = useState(0);
     const [f, setF] = useState(Direction.NORTH);
 
-    const place = (newX: number, newY: number, newF: Direction) => {
-        const oldX = x;
-        const oldY = y;
-
-        setX(newX);
-        setY(newY);
-        setF(newF);
-
-        if (!checkLocation()) {
-            setX(oldX);
-            setY(oldY);
+    const place = (oldPos: IPos, newPos: IPos): IPos => {
+        if (checkLocation(newPos.x, newPos.y)) {
+            return newPos;
         }
+
+        return oldPos;
     };
 
-    const move = () => {
-        const oldX = x;
-        const oldY = y;
+    const move = (pos: IPos): IPos => {
+        let diffX = 0;
+        let diffY = 0;
 
-        switch (f) {
+        switch (pos.f) {
             case Direction.NORTH: {
-                setY(1);
+                diffY = 1;
                 break;
             }
             case Direction.EAST: {
-                setX(x + 1);
+                diffX = 1;
                 break;
             }
             case Direction.SOUTH: {
-                setY(y - 1);
+                diffY = -1;
                 break;
             }
             case Direction.WEST: {
-                setX(x - 1);
+                diffX = -1;
                 break;
             }
         }
 
-        if (!checkLocation()) {
-            setX(oldX);
-            setY(oldY);
+        if (checkLocation(pos.x + diffX, pos.y + diffY)) {
+            return {
+                ...pos,
+                x: pos.x + diffX,
+                y: pos.y + diffY,
+            };
         }
+
+        return pos;
     };
 
-    const left = () => {
-        switch (f) {
+    const left = (pos: IPos): Direction => {
+        switch (pos.f) {
             case Direction.NORTH: {
-                setF(Direction.WEST);
-                break;
+                return Direction.WEST;
             }
             case Direction.EAST: {
-                setF(Direction.NORTH);
-                break;
+                return Direction.NORTH;
             }
             case Direction.SOUTH: {
-                setF(Direction.EAST);
-                break;
+                return Direction.EAST;
             }
-            case Direction.WEST: {
-                setF(Direction.SOUTH);
-                break;
+            default: {
+                return Direction.SOUTH;
             }
         }
     };
 
-    const right = () => {
-        switch (f) {
+    const right = (pos: IPos): Direction => {
+        switch (pos.f) {
             case Direction.NORTH: {
-                setF(Direction.EAST);
-                break;
+                return Direction.EAST;
             }
             case Direction.EAST: {
-                setF(Direction.SOUTH);
-                break;
+                return Direction.SOUTH;
             }
             case Direction.SOUTH: {
-                setF(Direction.WEST);
-                break;
+                return Direction.WEST;
             }
-            case Direction.WEST: {
-                setF(Direction.NORTH);
-                break;
+            default: {
+                return Direction.NORTH;
             }
         }
     };
 
-    const report = () => {
-        console.log(x, y, f);
+    const report = (pos: IPos) => {
+        const output = `${pos.x}, ${pos.y}, ${pos.f.toString()}`;
+        parentCallback(output);
     };
 
-    const checkLocation = () => {
-        if (x < 0 && y < 0) {
+    const checkLocation = (newX: number, newY: number) => {
+        if (newX < 0 || newY < 0) {
             return false;
         }
 
-        if (x > Data.width && y > Data.height) {
+        if (newX >= Data.columns || newY >= Data.rows) {
             return false;
         }
 
         return true;
     };
 
-    useEffect(() => {
-        let foundPlace = false;
+    const rotation = (): number => {
+        switch (f) {
+            case Direction.NORTH: {
+                return 0;
+            }
+            case Direction.EAST: {
+                return 90;
+            }
+            case Direction.SOUTH: {
+                return 180;
+            }
+            default: {
+                return 270;
+            }
+        }
+    };
 
+    useEffect(() => {
         if (file !== '') {
+            let found = false;
+            let pos = {
+                x: 0,
+                y: 0,
+                f: Direction.NORTH,
+            };
             const lines = file.split('\n');
+
             for (let i = 0; i < lines.length; i++) {
                 const elements = lines[i].split(' ');
-
-                console.log(elements[0]);
 
                 switch (elements[0] as Command) {
                     case Command.PLACE: {
                         const params = elements[1].split(',');
-                        place(parseInt(params[0]), parseInt(params[1]), params[2] as Direction);
-                        foundPlace = true;
+                        let newPos = {
+                            x: parseInt(params[0]),
+                            y: parseInt(params[1]),
+                            f: params[2] as Direction,
+                        };
+
+                        pos = place(pos, newPos);
+
+                        found = true;
                         break;
                     }
                     case Command.MOVE: {
-                        if (!foundPlace) break;
-                        move();
+                        if (!found) break;
+                        pos = move(pos);
+                        console.log(pos);
                         break;
                     }
                     case Command.LEFT: {
-                        if (!foundPlace) break;
-                        left();
+                        if (!found) break;
+                        pos = {
+                            ...pos,
+                            f: left(pos),
+                        };
                         break;
                     }
                     case Command.RIGHT: {
-                        if (!foundPlace) break;
-                        right();
+                        if (!found) break;
+                        pos = {
+                            ...pos,
+                            f: right(pos),
+                        };
                         break;
                     }
                     case Command.REPORT: {
-                        if (!foundPlace) break;
-                        report();
+                        if (!found) break;
+                        report(pos);
                         break;
                     }
                 }
             }
+
+            setX(pos.x);
+            setY(pos.y);
+            setF(pos.f);
         }
     }, [file]);
 
@@ -166,7 +203,7 @@ const Robot = ({ file }: Props) => {
                 left: `${Data.height * x}px`,
                 width: `${Data.width}px`,
                 height: `${Data.height}px`,
-                transform: `rotate(0deg)`,
+                transform: `rotate(${rotation()}deg)`,
             })}
         />
     );
